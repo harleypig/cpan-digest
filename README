@@ -1,0 +1,4 @@
+A simple interface for browsing latest CPAN uploads.
+Similar to https://metacpan.org/recent but only last module releases are shown.
+
+You can clone the repo and load index.html from your hard disk.
