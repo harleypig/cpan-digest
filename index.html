@@ -20,59 +20,50 @@
         </script>
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
         <script src="http://ajax.microsoft.com/ajax/jquery.templates/beta1/jquery.tmpl.min.js"></script>
-        <script type="text/javascript">
-            $(document).ready(function() {
-                var getStartDate = function() {
-                    var startDate = new Date();
-                    startDate.setDate(startDate.getDate() - $('#offset').val());
-                    return startDate;
-                };
-                var loadData = function(startDate) {
-                    var url = 'http://api.metacpan.org/v0/release/_search?callback=?&fields=name,distribution,author,abstract&sort=date:desc&q=status:(cpan OR latest) AND release.date:["' + startDate + '" TO *]&size=100';
-                    $.getJSON(url, function(data) {
-                        $('#list').empty();
-                        var seen = {};
-                        var list = [];
-                        var authors = [];
-                        $.each(data.hits.hits, function(index, value) {
-                            if (!seen[value.fields.distribution]) {
-                                list.push(value.fields);
-                                seen[value.fields.distribution] = 1;
-                                authors.push(value.fields.author);
-                            }
-                        });
-                        var authors_request = {
-                            size: 100,
-                            query: {match_all: {}},
-                            fields: ["name","gravatar_url"],
-                            filter: {
-                                terms: {
-                                    pauseid: authors
-                                }
-                            }
-                        };
+        <script type="text/javascript" src="coffee-script.js"></script>
+        <script type="text/coffeescript">
+        $ ->
+            getStartDate = ->
+                startDate = new Date
+                startDate.setDate startDate.getDate() - $('#offset').val()
+                startDate
 
-                        var author_profiles = {};
-                        $.getJSON('http://api.metacpan.org/author/_search?source=' + encodeURIComponent(JSON.stringify(authors_request)), function(data) {
-                            $.each(data.hits.hits, function(index, value) {
-                                author_profiles[value._id] = value.fields;
-                            });
-                            $.each(list, function(index, value) {
-                                var author_profile = author_profiles[value.author];
+            loadData = (startDate) ->
+                url = "http://api.metacpan.org/v0/release/_search?callback=?&fields=name,distribution,author,abstract&sort=date:desc&q=status:(cpan OR latest) AND release.date:[\"#{startDate}\" TO *]&size=100"
+                $.getJSON url, (data) ->
+                    $('#list').empty()
+                    seen = []
+                    list = []
+                    authors = []
+                    for value in data.hits.hits
+                        do (value) ->
+                            unless seen[value.fields.distribution]
+                                seen[value.fields.distribution] = 1
+                                list.push value.fields
+                                authors.push value.fields.author
+                    authors_request = 
+                        size: 100
+                        query: {match_all: {}}
+                        fields: ["name","gravatar_url"]
+                        filter:
+                            terms:
+                                pauseid: authors
+                    author_profiles = {}
+                    $.getJSON 'http://api.metacpan.org/author/_search?source=' + encodeURIComponent(JSON.stringify authors_request), (data) ->
+                        author_profiles[value._id] = value.fields for value in data.hits.hits
+                        for value in list
+                            do (value) ->
+                                author_profile = author_profiles[value.author]
                                 value.author_img_url = author_profile.gravatar_url;
                                 value.author_name = author_profile.name;
-                            });
-                            $('#itemTemplate').tmpl(list).appendTo('#list');
-                        });
-                    });
-                };
-                var refresh = function() {
-                    var startDate = getStartDate();
-                    loadData(startDate.getFullYear() + '-' + (1 + startDate.getMonth()) + '-' + startDate.getDate() + 'T00:00:00');
-                };
-                $('#offset').change(refresh);
-                refresh();
-            });
+                        $('#itemTemplate').tmpl(list).appendTo('#list')
+
+            refresh = ->
+                startDate = getStartDate()
+                loadData(startDate.getFullYear() + '-' + (1 + startDate.getMonth()) + '-' + startDate.getDate() + 'T00:00:00')
+
+            $('#offset').change refresh
+            refresh()
         </script>
     </head>
     <body>
